@@ -2,7 +2,13 @@ const Channel = require('../models/Channel');
 
 exports.getChannels = async (req, res) => {
     try {
-        const channels = await Channel.find().populate('members', 'username email');
+        const userId = req.userId;
+        const channels = await Channel.find({
+            $or: [
+                { type: 'public' },
+                { members: userId }
+            ]
+        }).populate('members', 'username email');
         res.status(200).json(channels);
     } catch (error) {
         console.error('Error fetching channels:', error);
@@ -12,7 +18,7 @@ exports.getChannels = async (req, res) => {
 
 exports.createChannel = async (req, res) => {
     try {
-        const { name, description } = req.body;
+        const { name, description, type = 'public', members = [] } = req.body;
 
         if (!name) {
             return res.status(400).json({ message: 'Channel name is required' });
@@ -23,10 +29,14 @@ exports.createChannel = async (req, res) => {
             return res.status(400).json({ message: 'Channel already exists' });
         }
 
+        // Ensure creator is always a member
+        const initialMembers = [...new Set([...members, req.userId])];
+
         const newChannel = new Channel({
             name,
             description,
-            members: [req.userId] // Add creator as a member automatically
+            type,
+            members: initialMembers
         });
 
         await newChannel.save();
@@ -48,6 +58,10 @@ exports.joinChannel = async (req, res) => {
         const channel = await Channel.findById(channelId);
         if (!channel) {
             return res.status(404).json({ message: 'Channel not found' });
+        }
+
+        if (channel.type === 'private') {
+            return res.status(403).json({ message: 'Cannot join private channel directly' });
         }
 
         if (channel.members.includes(userId)) {
@@ -83,5 +97,59 @@ exports.leaveChannel = async (req, res) => {
     } catch (error) {
         console.error('Error leaving channel:', error);
         res.status(500).json({ message: 'Server error leaving channel' });
+    }
+};
+
+exports.updateChannel = async (req, res) => {
+    try {
+        const { channelId } = req.params;
+        const { name, description } = req.body;
+        const userId = req.userId;
+
+        const channel = await Channel.findById(channelId);
+        if (!channel) {
+            return res.status(404).json({ message: 'Channel not found' });
+        }
+
+        // Check if user is a member (basic permission check)
+        if (!channel.members.some(member => member.toString() === userId)) {
+            return res.status(403).json({ message: 'Not authorized to update this channel' });
+        }
+
+        // Update fields if provided
+        if (name) channel.name = name;
+        if (description !== undefined) channel.description = description;
+
+        await channel.save();
+        await channel.populate('members', 'username email');
+
+        res.status(200).json(channel);
+    } catch (error) {
+        console.error('Error updating channel:', error);
+        res.status(500).json({ message: 'Server error updating channel' });
+    }
+};
+
+exports.deleteChannel = async (req, res) => {
+    try {
+        const { channelId } = req.params;
+        const userId = req.userId;
+
+        const channel = await Channel.findById(channelId);
+        if (!channel) {
+            return res.status(404).json({ message: 'Channel not found' });
+        }
+
+        // Check if user is a member (basic permission check)
+        if (!channel.members.some(member => member.toString() === userId)) {
+            return res.status(403).json({ message: 'Not authorized to delete this channel' });
+        }
+
+        await Channel.findByIdAndDelete(channelId);
+
+        res.status(200).json({ message: 'Channel deleted successfully', channelId });
+    } catch (error) {
+        console.error('Error deleting channel:', error);
+        res.status(500).json({ message: 'Server error deleting channel' });
     }
 };

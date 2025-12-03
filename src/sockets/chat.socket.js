@@ -81,6 +81,21 @@ function initSocket(server) {
       }
     });
 
+    socket.on("typing", (channelId) => {
+      socket.to(channelId).emit("typing", {
+        userId: socket.user.id,
+        username: socket.user.username,
+        channelId
+      });
+    });
+
+    socket.on("stop_typing", (channelId) => {
+      socket.to(channelId).emit("stop_typing", {
+        userId: socket.user.id,
+        channelId
+      });
+    });
+
     socket.on("disconnect", () => {
       console.log("User disconnected:", socket.user.id);
       onlineUsers.delete(socket.user.id.toString());

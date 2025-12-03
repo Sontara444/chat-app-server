@@ -1,4 +1,5 @@
 const Message = require('../models/Message');
+const { getIO } = require('../sockets/chat.socket');
 
 exports.getMessages = async (req, res) => {
     try {
@@ -61,9 +62,72 @@ exports.deleteMessage = async (req, res) => {
         }
 
         await Message.findByIdAndDelete(messageId);
+
+        // Emit socket event
+        const io = getIO();
+        io.to(message.channel.toString()).emit('message_deleted', messageId);
+
         res.status(200).json({ message: 'Message deleted successfully', messageId });
     } catch (error) {
         console.error('Error deleting message:', error);
         res.status(500).json({ message: 'Server error deleting message' });
+    }
+};
+
+exports.editMessage = async (req, res) => {
+    try {
+        const { messageId } = req.params;
+        const { content } = req.body;
+        const userId = req.userId;
+
+        const message = await Message.findById(messageId);
+        if (!message) {
+            return res.status(404).json({ message: 'Message not found' });
+        }
+
+        if (message.sender.toString() !== userId) {
+            return res.status(403).json({ message: 'Not authorized to edit this message' });
+        }
+
+        message.content = content;
+        await message.save();
+        await message.populate('sender', 'username email');
+
+        // Emit socket event
+        const io = getIO();
+        io.to(message.channel.toString()).emit('message_updated', message);
+
+        res.status(200).json(message);
+    } catch (error) {
+        console.error('Error editing message:', error);
+        res.status(500).json({ message: 'Server error editing message' });
+    }
+};
+
+exports.searchMessages = async (req, res) => {
+    try {
+        const { query, channelId } = req.query;
+
+        if (!query) {
+            return res.status(400).json({ message: 'Search query is required' });
+        }
+
+        const filter = {
+            content: { $regex: query, $options: 'i' } // Case-insensitive search
+        };
+
+        if (channelId) {
+            filter.channel = channelId;
+        }
+
+        const messages = await Message.find(filter)
+            .populate('sender', 'username email')
+            .sort({ timestamp: -1 })
+            .limit(50);
+
+        res.status(200).json(messages);
+    } catch (error) {
+        console.error('Error searching messages:', error);
+        res.status(500).json({ message: 'Server error searching messages' });
     }
 };

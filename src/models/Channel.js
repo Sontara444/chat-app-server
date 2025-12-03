@@ -11,6 +11,11 @@ const channelSchema = new mongoose.Schema({
         type: String,
         trim: true,
     },
+    type: {
+        type: String,
+        enum: ['public', 'private'],
+        default: 'public'
+    },
     members: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
