@@ -1,37 +1,24 @@
-const mongoose = require("mongoose");
-const { Schema, Types } = mongoose;
+const mongoose = require('mongoose');
 
-const messageSchema = new Schema({
-    sender: {
-        type:Types.ObjectId,
-        ref: "User",
-        required: true,
-    },
-    channel: {
-        type: Types.ObjectId,
-        ref: "Channel",
-        required: true,
-    },
-    content: {
+const channelSchema = new mongoose.Schema({
+    name: {
         type: String,
         required: true,
+        unique: true,
         trim: true,
     },
-
-    editedAt: {
-        type: Date,
-        default: null,
+    description: {
+        type: String,
+        trim: true,
     },
-
-    deletedAt: {
+    members: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+    }],
+    createdAt: {
         type: Date,
-        default: null,
-    },
+        default: Date.now,
+    }
+});
 
-}, { timestamps: true });
-
-messageSchema.index({ channel: 1, createdAt: -1 });
-
-const Message = mongoose.model("Message", messageSchema);
-
-module.exports = Message;
+module.exports = mongoose.model('Channel', channelSchema);

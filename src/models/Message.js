@@ -1,41 +1,25 @@
-const mongoose = require("mongoose");
-const { Schema, Types } = mongoose;
+const mongoose = require('mongoose');
 
-const messageSchema = new Schema(
-  {
-    sender: {
-      type: Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-
-    channel: {
-      type: Types.ObjectId,
-      ref: "Channel",
-      required: true,
-    },
-
-    content: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-
-    editedAt: {
-      type: Date,
-      default: null,
-    },
-
-    deletedAt: {
-      type: Date,
-      default: null,
-    },
+const messageSchema = new mongoose.Schema({
+  channel: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Channel',
+    required: true,
   },
-  { timestamps: true }
-);
+  sender: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+  },
+  content: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  timestamp: {
+    type: Date,
+    default: Date.now,
+  }
+});
 
-messageSchema.index({ channel: 1, createdAt: -1 });
-
-const Message = mongoose.model("Message", messageSchema);
-
-module.exports = Message;
+module.exports = mongoose.model('Message', messageSchema);
