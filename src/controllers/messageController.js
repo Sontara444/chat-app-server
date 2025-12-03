@@ -45,3 +45,25 @@ exports.createMessage = async (req, res) => {
         res.status(500).json({ message: 'Server error sending message' });
     }
 }
+
+exports.deleteMessage = async (req, res) => {
+    try {
+        const { messageId } = req.params;
+        const userId = req.userId;
+
+        const message = await Message.findById(messageId);
+        if (!message) {
+            return res.status(404).json({ message: 'Message not found' });
+        }
+
+        if (message.sender.toString() !== userId) {
+            return res.status(403).json({ message: 'Not authorized to delete this message' });
+        }
+
+        await Message.findByIdAndDelete(messageId);
+        res.status(200).json({ message: 'Message deleted successfully', messageId });
+    } catch (error) {
+        console.error('Error deleting message:', error);
+        res.status(500).json({ message: 'Server error deleting message' });
+    }
+};
