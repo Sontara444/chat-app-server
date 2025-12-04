@@ -48,6 +48,7 @@ function initSocket(server) {
       username: socket.user.username,
       email: socket.user.email
     });
+    socket.join(socket.user.id.toString());
     io.emit("online_users", Array.from(onlineUsers.values()));
 
     // Join a channel
@@ -98,6 +99,24 @@ function initSocket(server) {
         userId: socket.user.id,
         channelId
       });
+    });
+
+    // WebRTC Signaling
+    socket.on("call_user", (data) => {
+      const { userToCall, signalData, from, name, callType } = data;
+      io.to(userToCall).emit("call_user", { signal: signalData, from, name, callType });
+    });
+
+    socket.on("answer_call", (data) => {
+      io.to(data.to).emit("call_accepted", data.signal);
+    });
+
+    socket.on("ice_candidate", (data) => {
+      io.to(data.to).emit("ice_candidate", data.candidate);
+    });
+
+    socket.on("end_call", (data) => {
+      io.to(data.to).emit("end_call");
     });
 
     socket.on("disconnect", () => {
