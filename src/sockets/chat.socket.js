@@ -51,45 +51,15 @@ function initSocket(server) {
     io.emit("online_users", Array.from(onlineUsers.values()));
 
     // Join a channel
-    socket.on("join_channel", async (channelId) => {
+    socket.on("join_channel", (channelId) => {
       socket.join(channelId);
       console.log(`User ${socket.user.id} joined channel ${channelId}`);
-
-      try {
-        // Create system message
-        const systemMessage = new Message({
-          channel: channelId,
-          type: 'system',
-          content: `${socket.user.username} joined the channel`
-        });
-        await systemMessage.save();
-
-        // Broadcast to the channel
-        io.to(channelId).emit("receive_message", systemMessage);
-      } catch (error) {
-        console.error("Error sending join system message:", error);
-      }
     });
 
     // Leave a channel
-    socket.on("leave_channel", async (channelId) => {
+    socket.on("leave_channel", (channelId) => {
       socket.leave(channelId);
       console.log(`User ${socket.user.id} left channel ${channelId}`);
-
-      try {
-        // Create system message
-        const systemMessage = new Message({
-          channel: channelId,
-          type: 'system',
-          content: `${socket.user.username} left the channel`
-        });
-        await systemMessage.save();
-
-        // Broadcast to the channel
-        io.to(channelId).emit("receive_message", systemMessage);
-      } catch (error) {
-        console.error("Error sending leave system message:", error);
-      }
     });
 
     // Send message

@@ -9,12 +9,7 @@ const messageSchema = new mongoose.Schema({
   sender: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    // required: true, // Made optional for system messages
-  },
-  type: {
-    type: String,
-    enum: ['text', 'system'],
-    default: 'text',
+    required: true,
   },
   content: {
     type: String,
